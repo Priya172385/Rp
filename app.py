@@ -1,49 +1,43 @@
 import streamlit as st
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
+import pandas as pd
 
-st.set_page_config(page_title="AI Symptom Checker", page_icon="🩺")
+st.set_page_config(page_title="Smart Average Calculator", page_icon="📊")
 
-st.title("🩺 AI Symptom Checker")
-st.write("Enter your symptoms and let AI predict a possible condition.")
-st.warning("⚠️ This is for educational purposes only. Not a medical diagnosis.")
+st.title("📊 Smart Average Calculator for Teachers")
+st.write("Enter student marks to calculate total, average, and grade instantly.")
 
-# Sample training data
-symptoms = [
-    "fever cough headache",
-    "sneezing runny nose cold",
-    "chest pain shortness of breath",
-    "stomach pain nausea vomiting",
-    "fatigue body pain fever",
-    "itching skin rash",
-    "headache nausea sensitivity to light",
-]
+# Input
+student_name = st.text_input("Student Name")
 
-diseases = [
-    "Flu",
-    "Common Cold",
-    "Heart Issue",
-    "Food Poisoning",
-    "Viral Infection",
-    "Allergy",
-    "Migraine"
-]
+subjects = ["Maths", "Science", "English", "Computer", "Social"]
+marks = {}
 
-# Train model
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(symptoms)
+st.subheader("📝 Enter Marks")
+for subject in subjects:
+    marks[subject] = st.number_input(f"{subject} Marks", 0, 100, 0)
 
-model = MultinomialNB()
-model.fit(X, diseases)
+# Calculate
+if st.button("Calculate Result"):
+    total = sum(marks.values())
+    average = total / len(subjects)
 
-# User input
-user_input = st.text_area("📝 Enter symptoms (comma or space separated)")
-
-if st.button("Check Condition"):
-    if user_input.strip() == "":
-        st.error("Please enter symptoms.")
+    # Grade logic
+    if average >= 90:
+        grade = "A+"
+    elif average >= 80:
+        grade = "A"
+    elif average >= 70:
+        grade = "B"
+    elif average >= 60:
+        grade = "C"
     else:
-        user_vector = vectorizer.transform([user_input])
-        prediction = model.predict(user_vector)[0]
-        st.success(f"🧠 Possible Condition: **{prediction}**")
-        st.info("Please consult a medical professional for accurate diagnosis.")
+        grade = "Fail"
+
+    st.success(f"📌 Student: {student_name}")
+    st.write(f"📚 Total Marks: **{total}**")
+    st.write(f"📈 Average Marks: **{average:.2f}**")
+    st.write(f"🏆 Grade: **{grade}**")
+
+    # Display table
+    df = pd.DataFrame(list(marks.items()), columns=["Subject", "Marks"])
+    st.table(df)
