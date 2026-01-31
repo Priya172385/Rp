@@ -1,6 +1,8 @@
-import streamlit as st, random
-st.title("❤️ Love Calculator")
-name1 = st.text_input("Your name")
-name2 = st.text_input("Partner name")
-if st.button("Calculate Love"):
-    st.success(f"Love Score: {random.randint(50,100)}% 💘")
+import streamlit as st
+from datetime import date
+
+st.title("🎂 Age Calculator")
+dob = st.date_input("Select DOB")
+today = date.today()
+age = today.year - dob.year
+st.success(f"You are {age} years old")
