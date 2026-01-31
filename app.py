@@ -1,61 +1,57 @@
+import streamlit as st
 import smtplib
-import ssl
-from email.message import EmailMessage
-import time
+from email.mime.text import MIMEText
 from datetime import datetime
 
-# --- Configuration (replace with your details or environment variables) ---
-sender_email = "your_email@gmail.com"
-receiver_email = "recipient_email@example.com" # Can be the same as sender
-app_password = "your_generated_app_password" # Use the App Password, not your main password
+# --- Functions ---
+def send_email(subject, body, to_email):
+    # Configure your SMTP server details
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    sender_email = "YOUR_EMAIL@gmail.com" # Replace with your email
+    sender_password = "YOUR_APP_PASSWORD"   # Replace with your app password
 
-# Email content
-subject = "Medicine Reminder"
-body = "Hi there,\n\nThis is a reminder to take your medicine now."
-
-def send_reminder_email(to_email_address):
-    """Sends a medicine reminder email."""
-    msg = EmailMessage()
-    msg.set_content(body)
+    msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = sender_email
-    msg['To'] = to_email_address
+    msg['To'] = to_email
 
     try:
-        # Create a secure SSL context
-        context = ssl.create_default_context()
-        
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(sender_email, app_password)
-            server.send_message(msg)
-            print(f"[+] Email sent successfully to {to_email_address} at {datetime.now().strftime('%H:%M:%S')}")
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, to_email, msg.as_string())
+        server.quit()
+        return True
     except Exception as e:
-        print(f"[-] Failed to send email. Error: {e}")
+        st.error(f"Error: {e}")
+        return False
 
-# --- Scheduling Logic ---
-def schedule_daily_reminder(reminder_time_str):
-    """
-    Schedules a daily reminder email.
-    
-    Args:
-        reminder_time_str: The time to send the reminder in "HH:MM" format (e.g., "09:00").
-    """
-    while True:
-        now = datetime.now().strftime("%H:%M")
-        if now == reminder_time_str:
-            print(f"It's {now}, time for your medicine!")
-            send_reminder_email(receiver_email)
-            # Wait for 60 seconds to avoid sending multiple emails in the same minute
-            time.sleep(60) 
-        # Check frequently to catch the target minute
-        time.sleep(10) 
+# --- UI Setup ---
+st.title("💊 Automated Medicine Reminder")
 
-# Run the reminder script
-if __name__ == '__main__':
-    # Set the desired time for the reminder, e.g., "09:00" for 9:00 AM
-    reminder_time = "09:00" 
-    print(f"Medicine Reminder script started. Waiting for {reminder_time} daily.")
-    schedule_daily_reminder(reminder_time)
+with st.form("reminder_form"):
+    med_name = st.text_input("Medicine Name")
+    user_email = st.text_input("Recipient Email Address")
+    remind_time = st.time_input("Reminder Time")
+    submit = st.form_submit_button("Set Reminder")
+
+    if submit:
+        if med_name and user_email:
+            subject = f"🔔 Reminder: Take {med_name}"
+            body = f"Hello, it's time to take your medicine: {med_name} at {remind_time}."
+            
+            with st.spinner('Sending email...'):
+                success = send_email(subject, body, user_email)
+                if success:
+                    st.success(f"Reminder set for {med_name} at {remind_time}! Email will be sent.")
+        else:
+            st.warning("Please fill in all fields.")
+
+# --- How to Run ---
+# Save as app.py
+# Run: streamlit run app.py
+
 
 
 
