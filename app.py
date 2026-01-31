@@ -1,28 +1,33 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Budget Planner", page_icon="💰")
-st.title("💰 Personal Budget Planner")
-st.write("Enter your income and expenses to see your budget balance.")
+st.set_page_config(page_title="Calorie Intake Tracker", page_icon="🍎")
+st.title("🍎 Calorie Intake Tracker")
+st.write("Track your daily calorie intake and monitor your diet.")
 
-# Input Income
-income = st.number_input("💵 Total Monthly Income", min_value=0.0, step=100.0)
+# Input daily calorie goal
+calorie_goal = st.number_input("Daily Calorie Goal", min_value=0, step=100)
 
-# Input Expenses
-st.subheader("📝 Enter Monthly Expenses")
-expense_categories = ["Rent", "Food", "Transportation", "Utilities", "Entertainment", "Others"]
-expenses = {}
+# Session state to store meals
+if "meals" not in st.session_state:
+    st.session_state.meals = []
 
-for category in expense_categories:
-    expenses[category] = st.number_input(f"{category} Expense", min_value=0.0, step=50.0)
+st.subheader("➕ Add Meal")
+meal_name = st.text_input("Meal Name")
+meal_calories = st.number_input("Calories", min_value=0, step=50)
 
-# Calculate Total Expenses and Remaining Balance
-if st.button("Calculate Budget"):
-    total_expenses = sum(expenses.values())
-    balance = income - total_expenses
+if st.button("Add Meal"):
+    if meal_name.strip() == "":
+        st.error("Please enter meal name")
+    else:
+        st.session_state.meals.append({"Meal": meal_name, "Calories": meal_calories})
+        st.success(f"Added {meal_name} ({meal_calories} kcal)")
 
-    st.success(f"💸 Total Expenses: ${total_expenses:.2f}")
-    st.success(f"💰 Remaining Balance: ${balance:.2f}")
+# Display meal table
+if st.session_state.meals:
+    st.subheader("📋 Meals Logged Today")
+    df = pd.DataFrame(st.session_state.meals)
+    st.dataframe(df)
 
-    # Display Expenses Table
-    df = pd.DataFrame(list(expenses.items()), columns=["Category", "Amount ($)"])
+    total_calories = df_
+
