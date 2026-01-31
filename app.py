@@ -1,82 +1,62 @@
-import streamlit as st
-import schedule
-import time
-import threading
 import smtplib
+import ssl
 from email.message import EmailMessage
+import time
 from datetime import datetime
 
-# --- Page Setup ---
-st.set_page_config(page_title="Email Med-Reminder", page_icon="📧")
-st.title("📧 Medicine Email Reminder")
+# --- Configuration (replace with your details or environment variables) ---
+sender_email = "your_email@gmail.com"
+receiver_email = "recipient_email@example.com" # Can be the same as sender
+app_password = "your_generated_app_password" # Use the App Password, not your main password
 
-# --- Initialize States ---
-if 'reminders' not in st.session_state:
-    st.session_state['reminders'] = []
-if 'scheduler_running' not in st.session_state:
-    st.session_state['scheduler_running'] = False
+# Email content
+subject = "Medicine Reminder"
+body = "Hi there,\n\nThis is a reminder to take your medicine now."
 
-# --- Email Logic ---
-def send_email(med_name, dosage, sender_email, app_password, receiver_email):
+def send_reminder_email(to_email_address):
+    """Sends a medicine reminder email."""
     msg = EmailMessage()
-    msg.set_content(f"Hello!\n\nThis is your reminder to take {dosage} of {med_name}.\n\nStay healthy!")
-    msg['Subject'] = f"💊 Medicine Reminder: {med_name}"
+    msg.set_content(body)
+    msg['Subject'] = subject
     msg['From'] = sender_email
-    msg['To'] = receiver_email
+    msg['To'] = to_email_address
 
     try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(sender_email, app_password)
-            smtp.send_message(msg)
-        print(f"Email sent for {med_name}")
+        # Create a secure SSL context
+        context = ssl.create_default_context()
+        
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(sender_email, app_password)
+            server.send_message(msg)
+            print(f"[+] Email sent successfully to {to_email_address} at {datetime.now().strftime('%H:%M:%S')}")
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print(f"[-] Failed to send email. Error: {e}")
 
-# --- Background Scheduler ---
-def run_scheduler():
-    while True:
-        schedule.run_pending()
-        time.sleep(5)
-
-if not st.session_state['scheduler_running']:
-    t = threading.Thread(target=run_scheduler, daemon=True)
-    t.start()
-    st.session_state['scheduler_running'] = True
-
-# --- UI Sidebar ---
-with st.sidebar:
-    st.header("⚙️ Email Configuration")
-    s_email = st.text_input("Your Gmail Address")
-    a_pass = st.text_input("App Password", type="password", help="The 16-character code from Google")
-    r_email = st.text_input("Receiver Email (can be same as your gmail)")
-
-# --- Main Interface ---
-with st.form("med_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    name = col1.text_input("Medicine Name")
-    dose = col2.text_input("Dosage")
-    rem_time = st.time_input("Time for Reminder")
+# --- Scheduling Logic ---
+def schedule_daily_reminder(reminder_time_str):
+    """
+    Schedules a daily reminder email.
     
-    if st.form_submit_button("Add Reminder"):
-        if s_email and a_pass:
-            t_str = rem_time.strftime("%H:%M")
-            schedule.every().day.at(t_str).do(
-                send_email, 
-                med_name=name, 
-                dosage=dose, 
-                sender_email=s_email, 
-                app_password=a_pass, 
-                receiver_email=r_email
-            )
-            st.session_state['reminders'].append({"name": name, "dose": dose, "time": t_str})
-            st.success(f"Reminder set for {name} at {t_str}")
-        else:
-            st.error("Please provide email credentials in the sidebar.")
+    Args:
+        reminder_time_str: The time to send the reminder in "HH:MM" format (e.g., "09:00").
+    """
+    while True:
+        now = datetime.now().strftime("%H:%M")
+        if now == reminder_time_str:
+            print(f"It's {now}, time for your medicine!")
+            send_reminder_email(receiver_email)
+            # Wait for 60 seconds to avoid sending multiple emails in the same minute
+            time.sleep(60) 
+        # Check frequently to catch the target minute
+        time.sleep(10) 
 
-# --- Display List ---
-st.subheader("📋 Active Reminders")
-for r in st.session_state['reminders']:
-    st.write(f"⏰ **{r['time']}** — {r['name']} ({r['dose']})")
+# Run the reminder script
+if __name__ == '__main__':
+    # Set the desired time for the reminder, e.g., "09:00" for 9:00 AM
+    reminder_time = "09:00" 
+    print(f"Medicine Reminder script started. Waiting for {reminder_time} daily.")
+    schedule_daily_reminder(reminder_time)
+
 
 
 
