@@ -1,56 +1,60 @@
 import streamlit as st
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import time
 from datetime import datetime
 
-# --- Functions ---
-def send_email(subject, body, to_email):
-    # Configure your SMTP server details
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
-    sender_email = "YOUR_EMAIL@gmail.com" # Replace with your email
-    sender_password = "YOUR_APP_PASSWORD"   # Replace with your app password
+# --- Email Configuration ---
+# Use an App Password for Gmail, not your regular password
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SENDER_EMAIL = "your_email@gmail.com"
+SENDER_PASSWORD = "your_app_password" # Generated from Google Account
 
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = to_email
-
+def send_email(receiver_email, medicine_name, dosage):
+    msg = MIMEMultipart()
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = receiver_email
+    msg['Subject'] = f"💊 Medicine Reminder: {medicine_name}"
+    
+    body = f"Hello,\n\nIt's time to take your medicine:\n\nMedicine: {medicine_name}\nDosage: {dosage}\n\nStay healthy!"
+    msg.attach(MIMEText(body, 'plain'))
+    
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, to_email, msg.as_string())
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
         st.error(f"Error: {e}")
         return False
 
-# --- UI Setup ---
+# --- Streamlit UI ---
 st.title("💊 Automated Medicine Reminder")
 
 with st.form("reminder_form"):
-    med_name = st.text_input("Medicine Name")
-    user_email = st.text_input("Recipient Email Address")
-    remind_time = st.time_input("Reminder Time")
-    submit = st.form_submit_button("Set Reminder")
+    patient_email = st.text_input("Patient Email")
+    medicine_name = st.text_input("Medicine Name")
+    dosage = st.text_input("Dosage (e.g., 1 pill, 5ml)")
+    reminder_time = st.time_input("Set Reminder Time")
+    submitted = st.form_submit_button("Schedule Reminder")
 
-    if submit:
-        if med_name and user_email:
-            subject = f"🔔 Reminder: Take {med_name}"
-            body = f"Hello, it's time to take your medicine: {med_name} at {remind_time}."
-            
-            with st.spinner('Sending email...'):
-                success = send_email(subject, body, user_email)
-                if success:
-                    st.success(f"Reminder set for {med_name} at {remind_time}! Email will be sent.")
-        else:
-            st.warning("Please fill in all fields.")
+if submitted:
+    st.write(f"Waiting to send reminder at {reminder_time}...")
+    
+    # Simple scheduler loop (for demonstration, better to use background task scheduler)
+    while True:
+        now = datetime.now().time()
+        if now.hour == reminder_time.hour and now.minute == reminder_time.minute:
+            success = send_email(patient_email, medicine_name, dosage)
+            if success:
+                st.success("✅ Reminder email sent successfully!")
+            break
+        time.sleep(30) # Check every 30 seconds
 
-# --- How to Run ---
-# Save as app.py
-# Run: streamlit run app.py
 
 
 
