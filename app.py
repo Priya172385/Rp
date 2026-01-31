@@ -1,7 +1,12 @@
 import streamlit as st
-st.title("🌤 Weather App")
-city = st.text_input("Enter City Name")
-if st.button("Get Weather"):
-    st.write(f"Weather in {city}: Sunny, 25°C")  # placeholder
+st.title("📅 Daily Habit Tracker")
+if "habits" not in st.session_state: st.session_state.habits=[]
+habit = st.text_input("Add a habit")
+if st.button("Add Habit"):
+    if habit: st.session_state.habits.append(habit)
+if st.session_state.habits:
+    st.subheader("Your Habits")
+    for h in st.session_state.habits: st.write("•", h)
+
 
 
