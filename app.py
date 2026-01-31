@@ -9,9 +9,9 @@ st.title("💊 Medicine Reminder with SMS Notifications")
 # -----------------------------
 # Twilio Configuration
 # -----------------------------
-TWILIO_ACCOUNT_SID = "YOUR_ACCOUNT_SID"
-TWILIO_AUTH_TOKEN = "YOUR_AUTH_TOKEN"
-TWILIO_PHONE_NUMBER = "+1234567890"  # Your Twilio phone number
+TWILIO_ACCOUNT_SID = "YOUR_ACCOUNT_SID"       # Replace with your Twilio SID
+TWILIO_AUTH_TOKEN = "YOUR_AUTH_TOKEN"         # Replace with your Twilio Auth Token
+TWILIO_PHONE_NUMBER = "+1234567890"           # Replace with your Twilio phone number
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
@@ -38,7 +38,7 @@ with st.form("medicine_form"):
 
     if submitted:
         if med_name.strip() == "" or not user_phone.strip():
-            st.error("Please enter medicine name and phone number!")
+            st.error("Please enter a medicine name and your phone number!")
         else:
             st.session_state.medicines.append({
                 "Medicine": med_name,
@@ -80,6 +80,7 @@ if st.button("Check & Send Reminder"):
                     st.error(f"Failed to send SMS: {e}")
         if reminders_sent == 0:
             st.info("No medicines scheduled for this time.")
+
 
 
 
