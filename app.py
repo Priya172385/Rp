@@ -1,85 +1,83 @@
 import streamlit as st
 import smtplib
 from email.mime.text import MIMEText
-from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+import datetime
 import time
 import threading
 
-# ---------------- CONFIGURATION ---------------- #
-# IMPORTANT: Put your 16-character App Password here (no spaces)
-SENDER_EMAIL = "your_email@gmail.com"  
-APP_PASSWORD = "your_app_password_here" 
+# --- EMAIL CONFIGURATION ---
+SENDER_EMAIL = "your_email@gmail.com"  # Replace with your email
+SENDER_PASSWORD = "your_app_password"  # Replace with your 16-char App Password
+RECEIVER_EMAIL = "recipient_email@gmail.com" # Replace with receiver's email
 
-# ---------------- EMAIL FUNCTION ---------------- #
-def send_email(receiver_email, subject, message):
-    msg = MIMEText(message)
-    msg["Subject"] = subject
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = receiver_email
+def send_email(med_name, med_time):
+    """Sends an email notification."""
+    msg = MIMEMultipart()
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = RECEIVER_EMAIL
+    msg['Subject'] = f"💊 Medicine Reminder: {med_name}"
+    body = f"Hello,\n\nThis is a reminder to take your medicine: {med_name} at {med_time}.\n\nStay healthy!"
+    msg.attach(MIMEText(body, 'plain'))
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(SENDER_EMAIL, APP_PASSWORD)
-            server.send_message(msg)
-        return True
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+        server.quit()
+        print(f"Email sent for {med_name}")
     except Exception as e:
-        st.error(f"Email Error: {e}")
-        return False
+        print(f"Failed to send email: {e}")
 
-# ---------------- BACKGROUND CHECKER ---------------- #
-def reminder_loop(user_email):
-    while True:
-        now = datetime.now().strftime("%I:%M %p")
-        # Accessing session_state inside a thread can be unstable in Streamlit
-        # but for local use, it works if the session is active.
-        if "medicine_list" in st.session_state:
-            for med in st.session_state.medicine_list:
-                if med["time"] == now and not med["sent"]:
-                    body = f"💊 Medicine Reminder!\n\nIt is {now}. Time to take: {med['name']}"
-                    if send_email(user_email, "Medicine Alert", body):
-                        med["sent"] = True
-        time.sleep(30)
+# --- STREAMLIT UI ---
+st.set_page_config(page_title="💊 Medicine Reminder", page_icon="💊")
+st.title("💊 Automated Medicine Reminder")
 
-# ---------------- STREAMLIT UI ---------------- #
-st.set_page_config(page_title="Medicine Notify", page_icon="💊")
-st.title("💊 Medicine Email Reminder")
+# Session state to store multiple medicines
+if 'medicines' not in st.session_state:
+    st.session_state['medicines'] = []
 
-# Setup state
-if "medicine_list" not in st.session_state:
-    st.session_state.medicine_list = []
-if "running" not in st.session_state:
-    st.session_state.running = False
-
-email_target = st.text_input("📧 Receiver Email Address")
-
-# TEST BUTTON: Check connection immediately
-if st.button("🧪 Send Test Email"):
-    if email_target:
-        if send_email(email_target, "Test Email", "If you see this, your settings are CORRECT!"):
-            st.success("Test email sent! Check your inbox (and Spam).")
-    else:
-        st.warning("Enter an email first.")
-
-with st.expander("➕ Add Medicine"):
-    name = st.text_input("Medicine Name")
-    c1, c2, c3 = st.columns(3)
-    hr = c1.selectbox("Hour", [f"{i:02d}" for i in range(1, 13)])
-    mn = c2.selectbox("Min", [f"{i:02d}" for i in range(0, 60)])
-    ap = c3.selectbox("AM/PM", ["AM", "PM"])
+with st.form("medicine_form"):
+    st.subheader("Add New Medicine")
+    med_name = st.text_input("Medicine Name")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        hour = st.selectbox("Hour", [f"{i:02d}" for i in range(1, 13)])
+    with col2:
+        minute = st.selectbox("Minute", [f"{i:02d}" for i in range(0, 60, 5)])
+    with col3:
+        ampm = st.selectbox("AM/PM", ["AM", "PM"])
     
-    if st.button("Save"):
-        st.session_state.medicine_list.append({"name": name, "time": f"{hr}:{mn} {ap}", "sent": False})
-        st.success("Added!")
+    time_str = f"{hour}:{minute} {ampm}"
+    submit = st.form_submit_button("Add Reminder")
 
-# Display List
-for m in st.session_state.medicine_list:
-    st.write(f"⏰ {m['time']} - {m['name']} {'✅' if m['sent'] else '⏳'}")
+    if submit and med_name:
+        st.session_state['medicines'].append({"name": med_name, "time": time_str})
+        st.success(f"Added {med_name} at {time_str}")
 
-# Start the Service
-if not st.session_state.running:
-    if st.button("🚀 Start Reminder Service"):
-        if email_target:
-            t = threading.Thread(target=reminder_loop, args=(email_target,), daemon=True)
-            t.start()
-            st.session_state.running = True
-            st.success("System Live! Don't close this browser tab.")
+# Display Scheduled Medicines
+st.subheader("Scheduled Medicines")
+if st.session_state['medicines']:
+    for i, med in enumerate(st.session_state['medicines']):
+        st.write(f"{i+1}. **{med['name']}** - {med['time']}")
+else:
+    st.info("No medicines added yet.")
+
+# --- BACKGROUND SCHEDULER ---
+def run_scheduler():
+    while True:
+        now = datetime.datetime.now().strftime("%I:%M %p")
+        for med in st.session_state['medicines']:
+            if now == med['time']:
+                send_email(med['name'], med['time'])
+                time.sleep(60) # Prevent multiple emails in the same minute
+        time.sleep(10) # Check every 10 seconds
+
+# Run scheduler in a separate thread
+if 'thread_started' not in st.session_state:
+    thread = threading.Thread(target=run_scheduler, daemon=True)
+    thread.start()
+    st.session_state['thread_started'] = True
+
+
