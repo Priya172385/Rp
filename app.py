@@ -1,90 +1,47 @@
-pip install twilio streamlit
-import streamlit as st
+import schedule
+import time
 from twilio.rest import Client
-from datetime import datetime
-import pandas as pd
 
-st.set_page_config(page_title="💊 Medicine Reminder", page_icon="💊")
-st.title("💊 Medicine Reminder with Phone SMS Notifications")
+# --- Configuration ---
+# Replace these with your actual Twilio credentials
+ACCOUNT_SID = 'your_account_sid_here'
+AUTH_TOKEN = 'your_auth_token_here'
+TWILIO_NUMBER = 'your_twilio_phone_number'
+YOUR_PHONE_NUMBER = 'your_verified_phone_number'
 
-# -------------------
-# Twilio Configuration
-# -------------------
-TWILIO_ACCOUNT_SID = "YOUR_TWILIO_ACCOUNT_SID"
-TWILIO_AUTH_TOKEN = "YOUR_TWILIO_AUTH_TOKEN"
-TWILIO_PHONE_NUMBER = "+1234567890"  # Your Twilio phone number
+client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
-try:
-    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-except Exception as e:
-    st.error(f"Error connecting to Twilio: {e}")
+def send_sms_reminder(med_name, dosage):
+    """Sends the actual SMS via Twilio API"""
+    message_body = f"💊 MEDICINE REMINDER: It's time to take {dosage} of {med_name}."
+    
+    try:
+        message = client.messages.create(
+            body=message_body,
+            from_=TWILIO_NUMBER,
+            to=YOUR_PHONE_NUMBER
+        )
+        print(f"[{time.strftime('%H:%M:%S')}] Message sent successfully! SID: {message.sid}")
+    except Exception as e:
+        print(f"Error sending message: {e}")
 
-# -------------------
-# User Phone Input
-# -------------------
-user_phone = st.text_input(
-    "+918015428365)"
-)
+# --- Scheduling ---
+def schedule_meds():
+    # Format: .at("HH:MM") in 24-hour format
+    # Example 1: Vitamin C at 08:00 AM
+    schedule.every().day.at("08:00").do(send_sms_reminder, med_name="Vitamin C", dosage="500mg")
+    
+    # Example 2: Ibuprofen at 2:30 PM
+    schedule.every().day.at("14:30").do(send_sms_reminder, med_name="Ibuprofen", dosage="1 Tablet")
 
-# -------------------
-# Initialize Medicine List
-# -------------------
-if "medicines" not in st.session_state:
-    st.session_state.medicines = []
+    print("Medicine Scheduler is running... (Press Ctrl+C to stop)")
 
-# -------------------
-# Add Medicine Form
-# -------------------
-st.subheader("Add a Medicine")
-with st.form("medicine_form"):
-    med_name = st.text_input("Medicine Name")
-    med_hour = st.number_input("Hour (0-23)", 0, 23)
-    med_minute = st.number_input("Minute (0-59)", 0, 59)
-    submitted = st.form_submit_button("Add Medicine")
+    while True:
+        schedule.run_pending()
+        time.sleep(60) # Check every minute
 
-    if submitted:
-        if med_name.strip() == "" or not user_phone:
-            st.error("Please enter a medicine name and your phone number!")
-        else:
-            st.session_state.medicines.append({
-                "Medicine": med_name,
-                "Hour": med_hour,
-                "Minute": med_minute
-            })
-            st.success(f"Medicine '{med_name}' added at {med_hour:02d}:{med_minute:02d}!")
-
-# -------------------
-# Show Medicine Schedule
-# -------------------
-if st.session_state.medicines:
-    st.subheader("🗓️ Medicine Schedule")
-    df = pd.DataFrame(st.session_state.medicines)
-    st.dataframe(df)
-
-# -------------------
-# Check & Send Reminder
-# -------------------
-st.subheader("🔔 Send Reminders Now")
-if st.button("Check & Send Reminder"):
-    if not user_phone:
-        st.error("Please enter your phone number first!")
-    else:
-        now = datetime.now()
-        reminders_sent = 0
-        for med in st.session_state.medicines:
-            if med["Hour"] == now.hour and med["Minute"] == now.minute:
-                try:
-                    message = client.messages.create(
-                        body=f"⏰ Reminder: Time to take your medicine '{med['Medicine']}'",
-                        from_=TWILIO_PHONE_NUMBER,
-                        to=user_phone
-                    )
-                    st.success(f"Reminder sent for '{med['Medicine']}' ✅")
-                    reminders_sent += 1
-                except Exception as e:
-                    st.error(f"Failed to send SMS: {e}")
-        if reminders_sent == 0:
-            st.info("No medicines scheduled for this time.")
+if __name__ == "__main__":
+    schedule_meds()
 
 
 
