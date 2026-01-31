@@ -1,27 +1,36 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Smart Average Calculator", page_icon="📊")
+st.set_page_config(page_title="Student Average Calculator", page_icon="📊")
 
-st.title("📊 Smart Average Calculator for Teachers")
-st.write("Enter student marks to calculate total, average, and grade instantly.")
-
-# Input
-student_name = st.text_input("Student Name")
+st.title("📊 Student Marks & Average Automation")
+st.write("Teachers can enter marks for all students and get instant averages.")
 
 subjects = ["Maths", "Science", "English", "Computer", "Social"]
-marks = {}
 
-st.subheader("📝 Enter Marks")
-for subject in subjects:
-    marks[subject] = st.number_input(f"{subject} Marks", 0, 100, 0)
+num_students = st.number_input("Enter number of students", min_value=1, step=1)
 
-# Calculate
-if st.button("Calculate Result"):
-    total = sum(marks.values())
+students_data = []
+
+st.subheader("📝 Enter Student Marks")
+
+for i in range(int(num_students)):
+    st.markdown(f"### Student {i+1}")
+    name = st.text_input(f"Student Name {i+1}", key=f"name{i}")
+
+    marks = []
+    for subject in subjects:
+        mark = st.number_input(
+            f"{subject} Marks",
+            min_value=0,
+            max_value=100,
+            key=f"{subject}{i}"
+        )
+        marks.append(mark)
+
+    total = sum(marks)
     average = total / len(subjects)
 
-    # Grade logic
     if average >= 90:
         grade = "A+"
     elif average >= 80:
@@ -33,11 +42,15 @@ if st.button("Calculate Result"):
     else:
         grade = "Fail"
 
-    st.success(f"📌 Student: {student_name}")
-    st.write(f"📚 Total Marks: **{total}**")
-    st.write(f"📈 Average Marks: **{average:.2f}**")
-    st.write(f"🏆 Grade: **{grade}**")
+    students_data.append([
+        name, total, round(average, 2), grade
+    ])
 
-    # Display table
-    df = pd.DataFrame(list(marks.items()), columns=["Subject", "Marks"])
-    st.table(df)
+# Display result
+if st.button("📈 Calculate Results"):
+    df = pd.DataFrame(
+        students_data,
+        columns=["Student Name", "Total Marks", "Average", "Grade"]
+    )
+    st.success("✅ Results Calculated Successfully!")
+    st.dataframe(df)
