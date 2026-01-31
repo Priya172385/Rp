@@ -1,61 +1,72 @@
 import streamlit as st
+import pandas as pd
 import smtplib
 import time
+import threading
 from datetime import datetime
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from email.message import EmailMessage
 
-# --- Configuration (Error-free Email Setup) ---
-# Use App Passwords for Gmail if 2FA is enabled
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+# --- CONFIGURATION ---
+# Replace these with your actual details
 SENDER_EMAIL = "your_email@gmail.com"
-SENDER_PASSWORD = "your_app_password" # Use App Password, not main password
+SENDER_PASSWORD = "your_app_password" # Use a Google App Password here
+RECEIVER_EMAIL = "receiver_email@gmail.com"
 
-# --- Email Function ---
-def send_email_reminder(recipient, medicine_name, dosage):
-    msg = MIMEMultipart()
+# --- EMAIL FUNCTION ---
+def send_email(medicine_name, dose):
+    msg = EmailMessage()
+    msg.set_content(f"Time to take your medicine: {medicine_name} ({dose}).")
+    msg['Subject'] = f"Medicine Reminder: {medicine_name}"
     msg['From'] = SENDER_EMAIL
-    msg['To'] = recipient
-    msg['Subject'] = f"🚨 Medicine Reminder: {medicine_name}"
-    
-    body = f"Hello,\n\nIt is time to take your medicine:\n{medicine_name} - {dosage}\n\nStay healthy!"
-    msg.attach(MIMEText(body, 'plain'))
-    
+    msg['To'] = RECEIVER_EMAIL
+
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(SENDER_EMAIL, SENDER_PASSWORD)
+            smtp.send_message(msg)
         return True
     except Exception as e:
-        st.error(f"Failed to send email: {e}")
+        print(f"Error: {e}")
         return False
 
-# --- Streamlit UI ---
-st.title("💊 Automated Medicine Reminder")
+# --- BACKGROUND SCHEDULER ---
+def check_schedule():
+    while True:
+        now = datetime.now().strftime("%I:%M %p") # 12-hour format (e.g., 08:30 PM)
+        if "schedule" in st.session_state:
+            for index, row in st.session_state.schedule.iterrows():
+                if row['Time'] == now and not row['Sent']:
+                    success = send_email(row['Medicine'], row['Dose'])
+                    if success:
+                        st.session_state.schedule.at[index, 'Sent'] = True
+        time.sleep(60) # Check every minute
 
-with st.form("reminder_form"):
-    med_name = st.text_input("Medicine Name", placeholder="E.g., Paracetamol")
-    dosage = st.text_input("Dosage", placeholder="E.g., 500mg, 1 tablet")
-    recipient_email = st.text_input("Recipient Email")
-    time_input = st.time_input("Reminder Time (AM/PM)")
-    submit = st.form_submit_button("Set Reminder")
+# --- STREAMLIT UI ---
+st.title("💊 Smart Medicine Reminder")
 
-if submit:
-    if med_name and recipient_email:
-        st.success(f"Reminder set for {med_name} at {time_input.strftime('%I:%M %p')}")
-        # Store reminder logic (simplified for example)
-        # In production, use a database or scheduler (e.g., APScheduler)
-    else:
-        st.error("Please fill in all fields.")
+if "schedule" not in st.session_state:
+    st.session_state.schedule = pd.DataFrame(columns=["Medicine", "Dose", "Time", "Sent"])
 
-# --- Background Task Simulation ---
-if st.button("Simulate Immediate Email"):
-    with st.spinner("Sending email..."):
-        success = send_email_reminder(recipient_email, med_name, dosage)
-        if success:
-            st.success("Email sent successfully!")
+# Start background thread once
+if "thread_started" not in st.session_state:
+    thread = threading.Thread(target=check_schedule, daemon=True)
+    thread.start()
+    st.session_state.thread_started = True
 
-# To run: streamlit run app.py
+with st.form("med_form", clear_on_submit=True):
+    name = st.text_input("Medicine Name")
+    dose = st.text_input("Dosage (e.g., 1 tablet)")
+    # Time picker converts to string AM/PM
+    med_time = st.time_input("Set Time")
+    formatted_time = med_time.strftime("%I:%M %p")
+    
+    submit = st.form_submit_button("Add Reminder")
+
+if submit and name:
+    new_data = pd.DataFrame([[name, dose, formatted_time, False]], 
+                            columns=["Medicine", "Dose", "Time", "Sent"])
+    st.session_state.schedule = pd.concat([st.session_state.schedule, new_data], ignore_index=True)
+    st.success(f"Reminder set for {name} at {formatted_time}")
+
+st.subheader("Your Schedule")
+st.table(st.session_state.schedule)
