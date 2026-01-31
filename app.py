@@ -1,23 +1,25 @@
 import streamlit as st
 import smtplib
+import schedule
+import time
+import threading
 from email.mime.text import MIMEText
 from datetime import datetime
-import time
 
-# --- CONFIGURATION (Use App Password for Gmail) ---
+# --- Configuration ---
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SENDER_EMAIL = "your_email@gmail.com"
-SENDER_PASSWORD = "your_app_password" # Use app password
-RECEIVER_EMAIL = "receiver_email@gmail.com"
+SENDER_EMAIL = "your_email@gmail.com" # Update this
+SENDER_PASSWORD = "your_app_password"   # Update this (App Password)
+RECEIVER_EMAIL = "receiver_email@gmail.com" # Update this
 
-# --- EMAIL SENDING FUNCTION ---
+# --- Functions ---
 def send_email(subject, body):
     msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = SENDER_EMAIL
     msg['To'] = RECEIVER_EMAIL
-
+    
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
@@ -25,55 +27,61 @@ def send_email(subject, body):
             server.send_message(msg)
         return True
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Failed to send email: {e}")
         return False
 
-# --- STREAMLIT UI ---
+def schedule_reminders():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+# --- Initialize session state ---
+if 'meds' not in st.session_state:
+    st.session_state['meds'] = []
+
+# --- UI Setup ---
 st.title("💊 Automated Medicine Reminder")
 
-st.sidebar.header("Add New Medicine")
-med_name = st.sidebar.text_input("Medicine Name")
-dosage = st.sidebar.text_input("Dosage (e.g., 1 tablet)")
-time_input = st.sidebar.time_input("Set Time (AM/PM)", value=None)
-
-if st.sidebar.button("Add Reminder"):
-    if med_name and time_input:
-        # Store in session state for persistence
-        if 'reminders' not in st.session_state:
-            st.session_state['reminders'] = []
-        
-        # Format time to AM/PM
-        formatted_time = time_input.strftime("%I:%M %p")
-        st.session_state['reminders'].append({
-            "name": med_name,
-            "dosage": dosage,
-            "time": formatted_time
-        })
-        st.sidebar.success(f"Reminder set for {med_name} at {formatted_time}")
-    else:
-        st.sidebar.error("Please fill in Medicine Name and Time")
-
-# --- DISPLAY REMINDERS ---
-st.subheader("Current Reminders")
-if 'reminders' in st.session_state and st.session_state['reminders']:
-    for i, rem in enumerate(st.session_state['reminders']):
-        st.write(f"{i+1}. **{rem['name']}** ({rem['dosage']}) - {rem['time']}")
+with st.sidebar:
+    st.header("Add New Medicine")
+    med_name = st.text_input("Medicine Name")
+    time_input = st.time_input("Time", value=None)
+    am_pm = st.selectbox("AM/PM", ["AM", "PM"])
     
-    # --- AUTOMATION LOGIC ---
-    if st.button("Start Reminder System"):
-        st.info("System Running... Checking times every minute.")
-        while True:
-            now = datetime.now().strftime("%I:%M %p")
-            for rem in st.session_state['reminders']:
-                if now == rem['time']:
-                    subject = f"🔔 MEDICATION REMINDER: {rem['name']}"
-                    body = f"Time to take your medicine!\n\nMedicine: {rem['name']}\nDosage: {rem['dosage']}\nTime: {rem['time']}"
-                    if send_email(subject, body):
-                        st.success(f"Email sent for {rem['name']} at {now}")
-                    time.sleep(60) # Prevent multiple emails in one minute
-            time.sleep(10) # Check every 10 seconds
+    if st.button("Add Reminder"):
+        if med_name and time_input:
+            formatted_time = time_input.strftime("%I:%M %p")
+            st.session_state['meds'].append({
+                "name": med_name,
+                "time": formatted_time
+            })
+            st.success(f"Added: {med_name} at {formatted_time}")
+            
+            # Schedule the task
+            schedule.every().day.at(time_input.strftime("%H:%M")).do(
+                send_email,
+                subject=f"Medicine Reminder: {med_name}",
+                body=f"Time to take your {med_name} at {formatted_time}!"
+            )
+        else:
+            st.error("Please fill in all fields.")
+
+# --- Display Meds ---
+st.subheader("Your Schedule")
+if st.session_state['meds']:
+    for med in st.session_state['meds']:
+        st.write(f"- **{med['name']}** at **{med['time']}**")
 else:
-    st.write("No reminders set yet.")
+    st.info("No medicines added yet.")
+
+# --- Start Scheduler ---
+if 'thread_started' not in st.session_state:
+    t = threading.Thread(target=schedule_reminders, daemon=True)
+    t.start()
+    st.session_state['thread_started'] = True
+    st.sidebar.success("Scheduler Active")
+
+
 
 
 
