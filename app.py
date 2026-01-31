@@ -1,12 +1,13 @@
-import streamlit as st
-st.title("📅 Daily Habit Tracker")
-if "habits" not in st.session_state: st.session_state.habits=[]
-habit = st.text_input("Add a habit")
-if st.button("Add Habit"):
-    if habit: st.session_state.habits.append(habit)
-if st.session_state.habits:
-    st.subheader("Your Habits")
-    for h in st.session_state.habits: st.write("•", h)
+import streamlit as st, random
+st.title("🐾 Random Animal Fact")
+facts = [
+    "A group of flamingos is called a 'flamboyance'.",
+    "Sloths can hold their breath longer than dolphins.",
+    "Butterflies can taste with their feet."
+]
+if st.button("Show Fact"):
+    st.write(random.choice(facts))
+
 
 
 
