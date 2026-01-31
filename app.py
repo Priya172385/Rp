@@ -1,56 +1,37 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Student Average Calculator", page_icon="📊")
+st.set_page_config(page_title="Employee Leave Tracker", page_icon="🏢")
 
-st.title("📊 Student Marks & Average Automation")
-st.write("Teachers can enter marks for all students and get instant averages.")
+st.title("🏢 Employee Leave Balance Tracker")
+st.write("Employees can easily check their remaining leave balance.")
 
-subjects = ["Maths", "Science", "English", "Computer", "Social"]
+# Session state to store employee data
+if "employees" not in st.session_state:
+    st.session_state.employees = []
 
-num_students = st.number_input("Enter number of students", min_value=1, step=1)
+st.subheader("➕ Add Employee Leave Details")
 
-students_data = []
+emp_id = st.text_input("Employee ID")
+emp_name = st.text_input("Employee Name")
 
-st.subheader("📝 Enter Student Marks")
+total_leave = st.number_input("Total Leave Allowed", min_value=0, step=1)
+used_leave = st.number_input("Leave Used", min_value=0, step=1)
 
-for i in range(int(num_students)):
-    st.markdown(f"### Student {i+1}")
-    name = st.text_input(f"Student Name {i+1}", key=f"name{i}")
-
-    marks = []
-    for subject in subjects:
-        mark = st.number_input(
-            f"{subject} Marks",
-            min_value=0,
-            max_value=100,
-            key=f"{subject}{i}"
-        )
-        marks.append(mark)
-
-    total = sum(marks)
-    average = total / len(subjects)
-
-    if average >= 90:
-        grade = "A+"
-    elif average >= 80:
-        grade = "A"
-    elif average >= 70:
-        grade = "B"
-    elif average >= 60:
-        grade = "C"
+if st.button("Add / Update Employee"):
+    if emp_name == "" or emp_id == "":
+        st.error("Please enter Employee ID and Name")
+    elif used_leave > total_leave:
+        st.error("Used leave cannot be greater than total leave")
     else:
-        grade = "Fail"
+        remaining_leave = total_leave - used_leave
 
-    students_data.append([
-        name, total, round(average, 2), grade
-    ])
-
-# Display result
-if st.button("📈 Calculate Results"):
-    df = pd.DataFrame(
-        students_data,
-        columns=["Student Name", "Total Marks", "Average", "Grade"]
-    )
-    st.success("✅ Results Calculated Successfully!")
-    st.dataframe(df)
+        # Update if employee exists
+        updated = False
+        for emp in st.session_state.employees:
+            if emp["ID"] == emp_id:
+                emp["Name"] = emp_name
+                emp["Total Leave"] = total_leave
+                emp["Used Leave"] = used_leave
+                emp["Remaining Leave"] = remaining_leave
+                updated = True
