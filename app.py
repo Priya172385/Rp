@@ -1,3 +1,4 @@
+pip install streamlit streamlit-autorefresh
 import streamlit as st
 import smtplib
 from email.mime.text import MIMEText
@@ -6,8 +7,8 @@ from streamlit_autorefresh import st_autorefresh
 
 # ---------------- EMAIL FUNCTION ---------------- #
 def send_email(receiver_email, subject, message):
-    sender_email = "your_email@gmail.com"       # 🔴 replace
-    app_password = "your_app_password"          # 🔴 replace
+    sender_email = "your_email@gmail.com"      # 🔴 change
+    app_password = "your_app_password"         # 🔴 change (Gmail App Password)
 
     msg = MIMEText(message)
     msg["Subject"] = subject
@@ -24,12 +25,12 @@ def send_email(receiver_email, subject, message):
         return False
 
 
-# ---------------- STREAMLIT SETUP ---------------- #
+# ---------------- STREAMLIT CONFIG ---------------- #
 st.set_page_config(page_title="Medicine Reminder", layout="centered")
-st.title("💊 Medicine Reminder App (Email)")
+st.title("💊 Medicine Reminder App (Email Notification)")
 
-# auto refresh every 60 seconds
-st_autorefresh(interval=60 * 1000, key="refresh")
+# refresh app every 60 seconds
+st_autorefresh(interval=60 * 1000, key="auto_refresh")
 
 email = st.text_input("📧 Enter your Email")
 
@@ -58,29 +59,33 @@ if st.button("➕ Add Medicine"):
             "time": medicine_time,
             "sent": False
         })
-        st.success("Medicine Added!")
+        st.success("Medicine added successfully!")
     else:
         st.error("Please enter medicine name")
 
-# ---------------- DISPLAY ---------------- #
+# ---------------- SHOW MEDICINES ---------------- #
 st.subheader("📋 Medicine Schedule")
-for med in st.session_state.medicine_list:
-    st.write(f"• {med['name']} at {med['time']}")
+if st.session_state.medicine_list:
+    for med in st.session_state.medicine_list:
+        st.write(f"• {med['name']} at {med['time']}")
+else:
+    st.info("No medicines added yet")
 
-# ---------------- CHECK REMINDERS ---------------- #
+# ---------------- REMINDER CHECK ---------------- #
 current_time = datetime.now().strftime("%I:%M %p")
 
 for med in st.session_state.medicine_list:
-    if med["time"] == current_time and not med["sent"]:
-        message = f"""💊 Medicine Reminder
+    if med["time"] == current_time and not med["sent"] and email:
+        message = (
+            f"💊 Medicine Reminder\n\n"
+            f"Medicine: {med['name']}\n"
+            f"Time: {med['time']}\n\n"
+            "Please take your medicine on time."
+        )
 
-Medicine: {med['name']}
-Time: {med['time']}
-
-Please take your medicine on time ❤️
-"""
         if send_email(email, "💊 Medicine Reminder", message):
             med["sent"] = True
-            st.success(f"Em
+            st.success(f"Reminder email sent for {med['name']}")
+
 
 
