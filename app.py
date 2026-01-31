@@ -1,17 +1,18 @@
 import streamlit as st
 
-st.title("📝 Grocery List Manager")
-if "grocery_list" not in st.session_state:
-    st.session_state.grocery_list = []
+st.title("🏠 Home Chores Tracker")
+if "chores" not in st.session_state:
+    st.session_state.chores = []
 
-item = st.text_input("Add Item to Grocery List")
-if st.button("Add Item"):
-    if item:
-        st.session_state.grocery_list.append(item)
+chore = st.text_input("Chore Name")
+if st.button("Add Chore"):
+    if chore:
+        st.session_state.chores.append(chore)
 
-st.subheader("Your Grocery List:")
-for i, itm in enumerate(st.session_state.grocery_list, 1):
-    st.write(f"{i}. {itm}")
+st.subheader("Chore List")
+for i, c in enumerate(st.session_state.chores, 1):
+    st.write(f"{i}. {c}")
+
 
 
 
