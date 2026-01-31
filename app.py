@@ -23,7 +23,7 @@ except Exception as e:
 # User Phone Input
 # -------------------
 user_phone = st.text_input(
-    "Enter your phone number (with country code, e.g., +911234567890)"
+    "+918015428365)"
 )
 
 # -------------------
