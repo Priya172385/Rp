@@ -1,4 +1,5 @@
 import streamlit as st
-st.title("😄 Emoji Mood Tracker")
-mood = st.radio("How do you feel?", ["😀", "😐", "😢", "😡"])
-st.write("Your mood today:", mood)
+st.title("✍️ Word Counter")
+text = st.text_area("Enter text")
+if text:
+    st.info(f"Words: {len(text.split())}")
