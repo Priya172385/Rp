@@ -1,12 +1,13 @@
-import streamlit as st, random
-st.title("🐾 Random Animal Fact")
-facts = [
-    "A group of flamingos is called a 'flamboyance'.",
-    "Sloths can hold their breath longer than dolphins.",
-    "Butterflies can taste with their feet."
-]
-if st.button("Show Fact"):
-    st.write(random.choice(facts))
+import streamlit as st
+st.title("🌡 Temperature Converter")
+temp = st.number_input("Temperature")
+unit = st.radio("Convert to", ["Celsius","Fahrenheit"])
+if st.button("Convert"):
+    if unit=="Celsius":
+        st.write(f"{(temp-32)*5/9:.2f} °C")
+    else:
+        st.write(f"{temp*9/5 + 32:.2f} °F")
+
 
 
 
