@@ -1,18 +1,20 @@
 import streamlit as st
-st.title("🍲 Home Recipe Keeper")
-if "recipes" not in st.session_state:
-    st.session_state.recipes = []
 
-recipe_name = st.text_input("Recipe Name")
-ingredients = st.text_area("Ingredients (comma separated)")
+st.title("💊 Medicine Reminder")
+if "medicines" not in st.session_state:
+    st.session_state.medicines = []
 
-if st.button("Add Recipe"):
-    if recipe_name and ingredients:
-        st.session_state.recipes.append({"Recipe": recipe_name, "Ingredients": ingredients})
+name = st.text_input("Medicine Name")
+time = st.time_input("Time to Take")
+if st.button("Add Medicine"):
+    st.session_state.medicines.append({"Medicine": name, "Time": str(time)})
+    st.success(f"Medicine {name} added!")
 
-st.subheader("Your Recipes")
-for r in st.session_state.recipes:
-    st.write(f"• {r['Recipe']}: {r['Ingredients']}")
+if st.session_state.medicines:
+    st.subheader("Medicine Schedule")
+    for med in st.session_state.medicines:
+        st.write(f"{med['Medicine']} - {med['Time']}")
+
 
 
 
