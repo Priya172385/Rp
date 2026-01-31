@@ -1,39 +1,28 @@
 import streamlit as st
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
 
-st.set_page_config(page_title="Fake News Detector", page_icon="📰")
-st.title("📰 Fake News Detector")
-st.write("Enter a news headline or text to check if it's Fake or Real news.")
+st.set_page_config(page_title="Budget Planner", page_icon="💰")
+st.title("💰 Personal Budget Planner")
+st.write("Enter your income and expenses to see your budget balance.")
 
-# Sample training data (for demo purposes)
-data = {
-    'text': [
-        "NASA confirms water on Mars",
-        "Aliens spotted in New York",
-        "Stock markets reach all-time high",
-        "Politician wins election with 99% votes",
-        "New study shows chocolate is healthy",
-        "Celebrity marries alien from outer space",
-        "COVID vaccines approved by WHO",
-        "Man travels through time using machine",
-    ],
-    'label': [
-        "Real",
-        "Fake",
-        "Real",
-        "Fake",
-        "Real",
-        "Fake",
-        "Real",
-        "Fake",
-    ]
-}
+# Input Income
+income = st.number_input("💵 Total Monthly Income", min_value=0.0, step=100.0)
 
-df = pd.DataFrame(data)
+# Input Expenses
+st.subheader("📝 Enter Monthly Expenses")
+expense_categories = ["Rent", "Food", "Transportation", "Utilities", "Entertainment", "Others"]
+expenses = {}
 
-# Train model
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(df['text'])
-y = df[']()
+for category in expense_categories:
+    expenses[category] = st.number_input(f"{category} Expense", min_value=0.0, step=50.0)
+
+# Calculate Total Expenses and Remaining Balance
+if st.button("Calculate Budget"):
+    total_expenses = sum(expenses.values())
+    balance = income - total_expenses
+
+    st.success(f"💸 Total Expenses: ${total_expenses:.2f}")
+    st.success(f"💰 Remaining Balance: ${balance:.2f}")
+
+    # Display Expenses Table
+    df = pd.DataFrame(list(expenses.items()), columns=["Category", "Amount ($)"])
