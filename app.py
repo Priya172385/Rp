@@ -1,5 +1,6 @@
-import streamlit as st
-st.title("✍️ Word Counter")
-text = st.text_area("Enter text")
-if text:
-    st.info(f"Words: {len(text.split())}")
+import streamlit as st, random
+st.title("❤️ Love Calculator")
+name1 = st.text_input("Your name")
+name2 = st.text_input("Partner name")
+if st.button("Calculate Love"):
+    st.success(f"Love Score: {random.randint(50,100)}% 💘")
