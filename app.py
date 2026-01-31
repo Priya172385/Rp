@@ -6,13 +6,9 @@ import time
 import threading
 
 # ---------------- CONFIGURATION ---------------- #
-# USE YOUR 16-DIGIT APP PASSWORD HERE (NO SPACES)
+# IMPORTANT: Put your 16-character App Password here (no spaces)
 SENDER_EMAIL = "your_email@gmail.com"  
-APP_PASSWORD = "swwq etft wbah jddd" 
-
-# Global variables to ensure the background thread can see them
-if "medicine_list" not in st.session_state:
-    st.session_state.medicine_list = []
+APP_PASSWORD = "your_app_password_here" 
 
 # ---------------- EMAIL FUNCTION ---------------- #
 def send_email(receiver_email, subject, message):
@@ -27,61 +23,63 @@ def send_email(receiver_email, subject, message):
             server.send_message(msg)
         return True
     except Exception as e:
-        print(f"SMTP Error: {e}") # This will show in your terminal
+        st.error(f"Email Error: {e}")
         return False
 
 # ---------------- BACKGROUND CHECKER ---------------- #
 def reminder_loop(user_email):
-    """Checks for reminders every 30 seconds"""
     while True:
-        current_time = datetime.now().strftime("%I:%M %p")
-        
-        # We loop through the list in session state
-        for med in st.session_state.medicine_list:
-            if med["time"] == current_time and not med["sent"]:
-                body = f"💊 Reminder: Time to take {med['name']}!"
-                if send_email(user_email, "Medicine Alert", body):
-                    med["sent"] = True
-                    print(f"Email sent successfully to {user_email}")
-        
+        now = datetime.now().strftime("%I:%M %p")
+        # Accessing session_state inside a thread can be unstable in Streamlit
+        # but for local use, it works if the session is active.
+        if "medicine_list" in st.session_state:
+            for med in st.session_state.medicine_list:
+                if med["time"] == now and not med["sent"]:
+                    body = f"💊 Medicine Reminder!\n\nIt is {now}. Time to take: {med['name']}"
+                    if send_email(user_email, "Medicine Alert", body):
+                        med["sent"] = True
         time.sleep(30)
 
 # ---------------- STREAMLIT UI ---------------- #
-st.set_page_config(page_title="Meds Notify", page_icon="💊")
+st.set_page_config(page_title="Medicine Notify", page_icon="💊")
 st.title("💊 Medicine Email Reminder")
 
-email_target = st.text_input("📧 Receiver Email", placeholder="Where should we send the alerts?")
+# Setup state
+if "medicine_list" not in st.session_state:
+    st.session_state.medicine_list = []
+if "running" not in st.session_state:
+    st.session_state.running = False
 
-with st.form("med_add"):
+email_target = st.text_input("📧 Receiver Email Address")
+
+# TEST BUTTON: Check connection immediately
+if st.button("🧪 Send Test Email"):
+    if email_target:
+        if send_email(email_target, "Test Email", "If you see this, your settings are CORRECT!"):
+            st.success("Test email sent! Check your inbox (and Spam).")
+    else:
+        st.warning("Enter an email first.")
+
+with st.expander("➕ Add Medicine"):
     name = st.text_input("Medicine Name")
     c1, c2, c3 = st.columns(3)
     hr = c1.selectbox("Hour", [f"{i:02d}" for i in range(1, 13)])
     mn = c2.selectbox("Min", [f"{i:02d}" for i in range(0, 60)])
     ap = c3.selectbox("AM/PM", ["AM", "PM"])
     
-    if st.form_submit_button("Add Medicine"):
-        if name:
-            st.session_state.medicine_list.append({
-                "name": name, 
-                "time": f"{hr}:{mn} {ap}", 
-                "sent": False
-            })
-            st.success(f"Added {name}")
+    if st.button("Save"):
+        st.session_state.medicine_list.append({"name": name, "time": f"{hr}:{mn} {ap}", "sent": False})
+        st.success("Added!")
 
-# Show Schedule
+# Display List
 for m in st.session_state.medicine_list:
-    st.write(f"⏰ {m['time']} - {m['name']} ({'✅ Sent' if m['sent'] else '⏳ Pending'})")
+    st.write(f"⏰ {m['time']} - {m['name']} {'✅' if m['sent'] else '⏳'}")
 
-# Start Threading
-if st.button("🚀 Start Reminder Service"):
-    if email_target and not st.session_state.get("running"):
-        thread = threading.Thread(target=reminder_loop, args=(email_target,), daemon=True)
-        thread.start()
-        st.session_state["running"] = True
-        st.success("Service Started! Keep this tab open.")
-    elif not email_target:
-        st.error("Please enter a receiver email.")
-
-
-
-
+# Start the Service
+if not st.session_state.running:
+    if st.button("🚀 Start Reminder Service"):
+        if email_target:
+            t = threading.Thread(target=reminder_loop, args=(email_target,), daemon=True)
+            t.start()
+            st.session_state.running = True
+            st.success("System Live! Don't close this browser tab.")
