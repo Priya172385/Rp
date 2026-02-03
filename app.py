@@ -7,7 +7,7 @@ import time
 import threading
 
 # -------------------------------------------------
-# SESSION STATE INITIALIZATION
+# SESSION STATE
 # -------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -26,25 +26,13 @@ if "thread_started" not in st.session_state:
 
 
 # -------------------------------------------------
-# EMAIL FUNCTION
+# EMAIL FUNCTIONS
 # -------------------------------------------------
-def send_email(sender_email, sender_password, receiver_email, med_name, med_time):
+def send_email(sender_email, sender_password, receiver_email, subject, body):
     msg = MIMEMultipart()
     msg["From"] = sender_email
     msg["To"] = receiver_email
-    msg["Subject"] = f"💊 Medicine Reminder: {med_name}"
-
-    body = f"""
-Hello,
-
-This is your medicine reminder.
-
-Medicine Name : {med_name}
-Time          : {med_time}
-
-Please take your medicine on time.
-Stay healthy 💙
-"""
+    msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
     try:
@@ -53,9 +41,40 @@ Stay healthy 💙
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, receiver_email, msg.as_string())
         server.quit()
-        print(f"Email sent for {med_name}")
     except Exception as e:
         print("Email error:", e)
+
+
+def send_login_success_email(email, password):
+    subject = "✅ Login Successful – Medicine Reminder App"
+    body = f"""
+Hello,
+
+You have successfully logged in to the Medicine Reminder App.
+
+Login Time: {datetime.datetime.now().strftime("%d-%m-%Y %I:%M %p")}
+
+If this was not you, please secure your account immediately.
+
+Stay healthy 💙
+"""
+    send_email(email, password, email, subject, body)
+
+
+def send_medicine_email(email, password, med_name, med_time):
+    subject = f"💊 Medicine Reminder: {med_name}"
+    body = f"""
+Hello,
+
+This is your medicine reminder.
+
+Medicine: {med_name}
+Time    : {med_time}
+
+Please take your medicine on time.
+Stay healthy 💙
+"""
+    send_email(email, password, email, subject, body)
 
 
 # -------------------------------------------------
@@ -65,33 +84,33 @@ st.set_page_config(page_title="💊 Medicine Reminder", page_icon="💊")
 
 if not st.session_state.logged_in:
     st.title("🔐 Login")
-    st.write("Enter your **Gmail** and **App Password**")
 
     email = st.text_input("📧 Gmail Address")
     password = st.text_input("🔑 Gmail App Password", type="password")
 
-    login_btn = st.button("Login")
-
-    if login_btn:
+    if st.button("Login"):
         if email and password:
             st.session_state.email = email
             st.session_state.password = password
             st.session_state.logged_in = True
-            st.success("Login successful ✅")
+
+            # 🔔 SEND LOGIN SUCCESS EMAIL
+            send_login_success_email(email, password)
+
+            st.success("Login successful! Email notification sent ✅")
             st.rerun()
         else:
             st.error("Please enter both email and app password")
 
     st.info(
-        "⚠️ Use **Gmail App Password**, not your normal Gmail password.\n\n"
+        "⚠️ Use Gmail **App Password** (16 characters)\n\n"
         "Google Account → Security → App Passwords"
     )
-
     st.stop()
 
 
 # -------------------------------------------------
-# MAIN APP (AFTER LOGIN)
+# MAIN APP
 # -------------------------------------------------
 st.title("💊 Automated Medicine Reminder")
 st.write(f"Logged in as **{st.session_state.email}**")
@@ -102,8 +121,9 @@ if st.button("🚪 Logout"):
     st.session_state.thread_started = False
     st.rerun()
 
+
 # -------------------------------------------------
-# ADD MEDICINE FORM
+# ADD MEDICINE
 # -------------------------------------------------
 with st.form("medicine_form"):
     st.subheader("Add New Medicine")
@@ -149,14 +169,13 @@ def run_scheduler():
 
         for med in st.session_state.medicines:
             if now == med["time"]:
-                send_email(
+                send_medicine_email(
                     st.session_state.email,
                     st.session_state.password,
-                    st.session_state.email,
                     med["name"],
                     med["time"]
                 )
-                time.sleep(60)  # avoid duplicate emails
+                time.sleep(60)
 
         time.sleep(10)
 
