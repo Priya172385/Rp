@@ -7,7 +7,7 @@ import time
 import threading
 
 # -------------------------------------------------
-# SESSION STATE
+# SESSION STATE INITIALIZATION
 # -------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -26,7 +26,7 @@ if "thread_started" not in st.session_state:
 
 
 # -------------------------------------------------
-# EMAIL FUNCTIONS
+# EMAIL FUNCTION
 # -------------------------------------------------
 def send_email(sender_email, sender_password, receiver_email, subject, body):
     msg = MIMEMultipart()
@@ -54,7 +54,7 @@ You have successfully logged in to the Medicine Reminder App.
 
 Login Time: {datetime.datetime.now().strftime("%d-%m-%Y %I:%M %p")}
 
-If this was not you, please secure your account immediately.
+If this was not you, please secure your account.
 
 Stay healthy 💙
 """
@@ -68,8 +68,8 @@ Hello,
 
 This is your medicine reminder.
 
-Medicine: {med_name}
-Time    : {med_time}
+Medicine Name : {med_name}
+Scheduled Time: {med_time}
 
 Please take your medicine on time.
 Stay healthy 💙
@@ -94,7 +94,7 @@ if not st.session_state.logged_in:
             st.session_state.password = password
             st.session_state.logged_in = True
 
-            # 🔔 SEND LOGIN SUCCESS EMAIL
+            # Send login email
             send_login_success_email(email, password)
 
             st.success("Login successful! Email notification sent ✅")
@@ -123,7 +123,7 @@ if st.button("🚪 Logout"):
 
 
 # -------------------------------------------------
-# ADD MEDICINE
+# ADD MEDICINE FORM
 # -------------------------------------------------
 with st.form("medicine_form"):
     st.subheader("Add New Medicine")
@@ -134,7 +134,8 @@ with st.form("medicine_form"):
     with col1:
         hour = st.selectbox("Hour", [f"{i:02d}" for i in range(1, 13)])
     with col2:
-        minute = st.selectbox("Minute", [f"{i:02d}" for i in range(0, 60, 5)])
+        # ✅ EVERY MINUTE (00–59)
+        minute = st.selectbox("Minute", [f"{i:02d}" for i in range(0, 60)])
     with col3:
         ampm = st.selectbox("AM / PM", ["AM", "PM"])
 
@@ -175,7 +176,7 @@ def run_scheduler():
                     med["name"],
                     med["time"]
                 )
-                time.sleep(60)
+                time.sleep(60)  # prevent duplicate mail
 
         time.sleep(10)
 
