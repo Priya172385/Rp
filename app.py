@@ -26,7 +26,7 @@ if "thread_started" not in st.session_state:
 
 
 # -------------------------------------------------
-# EMAIL FUNCTION
+# GENERIC EMAIL FUNCTION
 # -------------------------------------------------
 def send_email(sender_email, sender_password, receiver_email, subject, body):
     msg = MIMEMultipart()
@@ -45,6 +45,9 @@ def send_email(sender_email, sender_password, receiver_email, subject, body):
         print("Email error:", e)
 
 
+# -------------------------------------------------
+# EMAIL NOTIFICATIONS
+# -------------------------------------------------
 def send_login_success_email(email, password):
     subject = "✅ Login Successful – Medicine Reminder App"
     body = f"""
@@ -61,7 +64,25 @@ Stay healthy 💙
     send_email(email, password, email, subject, body)
 
 
-def send_medicine_email(email, password, med_name, med_time):
+def send_medicine_added_email(email, password, med_name, med_time):
+    subject = "➕ Medicine Added to Reminder"
+    body = f"""
+Hello,
+
+A new medicine has been added to your reminder list.
+
+Medicine Name : {med_name}
+Scheduled Time: {med_time}
+Added On      : {datetime.datetime.now().strftime("%d-%m-%Y %I:%M %p")}
+
+You will be notified at the scheduled time.
+
+Stay healthy 💙
+"""
+    send_email(email, password, email, subject, body)
+
+
+def send_medicine_reminder_email(email, password, med_name, med_time):
     subject = f"💊 Medicine Reminder: {med_name}"
     body = f"""
 Hello,
@@ -71,7 +92,7 @@ This is your medicine reminder.
 Medicine Name : {med_name}
 Scheduled Time: {med_time}
 
-Please take your medicine on time.
+Please take your medicine now.
 Stay healthy 💙
 """
     send_email(email, password, email, subject, body)
@@ -94,7 +115,7 @@ if not st.session_state.logged_in:
             st.session_state.password = password
             st.session_state.logged_in = True
 
-            # Send login email
+            # 🔔 LOGIN EMAIL
             send_login_success_email(email, password)
 
             st.success("Login successful! Email notification sent ✅")
@@ -134,7 +155,6 @@ with st.form("medicine_form"):
     with col1:
         hour = st.selectbox("Hour", [f"{i:02d}" for i in range(1, 13)])
     with col2:
-        # ✅ EVERY MINUTE (00–59)
         minute = st.selectbox("Minute", [f"{i:02d}" for i in range(0, 60)])
     with col3:
         ampm = st.selectbox("AM / PM", ["AM", "PM"])
@@ -146,7 +166,16 @@ with st.form("medicine_form"):
         st.session_state.medicines.append(
             {"name": med_name, "time": time_str}
         )
-        st.success(f"Added **{med_name}** at **{time_str}**")
+
+        # 🔔 MEDICINE ADDED EMAIL
+        send_medicine_added_email(
+            st.session_state.email,
+            st.session_state.password,
+            med_name,
+            time_str
+        )
+
+        st.success(f"Added **{med_name}** at **{time_str}** and email sent ✅")
 
 
 # -------------------------------------------------
@@ -170,13 +199,13 @@ def run_scheduler():
 
         for med in st.session_state.medicines:
             if now == med["time"]:
-                send_medicine_email(
+                send_medicine_reminder_email(
                     st.session_state.email,
                     st.session_state.password,
                     med["name"],
                     med["time"]
                 )
-                time.sleep(60)  # prevent duplicate mail
+                time.sleep(60)  # prevent duplicate email
 
         time.sleep(10)
 
